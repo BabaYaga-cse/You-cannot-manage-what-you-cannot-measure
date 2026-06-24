@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>You cannot manage what you cannot measure</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#eef0f3; --line:#dde1e7;
+    --text:#1a1f29; --dim:#4a5260; --faint:#6b7280;
+    --amber:#2f6fb0; --amberDim:#a9c6e6; --green:#15803d; --red:#cc4631; --blue:#2f6fb0; --orange:#b45309;
+    --track:#e6e9ee;
+    --mono:'Courier New',Courier,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);padding:26px 18px;min-height:100vh}
+  .wrap{max-width:720px;margin:0 auto}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--amber);text-transform:uppercase}
+  h1{font-size:25px;font-weight:700;margin:6px 0 4px;letter-spacing:-.5px}
+  .sub{color:var(--dim);font-size:13px;margin:0;line-height:1.5}
+  .toggles{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:18px 0 16px}
+  .toggle{text-align:left;padding:13px 15px;border-radius:10px;cursor:pointer;background:transparent;border:1.5px solid var(--line);transition:all .15s;font-family:var(--sans)}
+  .toggle .tl{font-size:12.5px;font-weight:700;color:var(--dim);letter-spacing:.3px}
+  .toggle .ts{font-size:10.5px;color:var(--faint);margin-top:3px}
+  .strip{display:grid;gap:10px;margin-bottom:14px}
+  .card{background:var(--panel);border-radius:10px;padding:13px 15px;border:1px solid var(--line)}
+  .card.amber{border-color:var(--amberDim)}
+  .lbl{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+  .big{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1.15}
+  .csub{font-size:10.5px;color:var(--faint);font-family:var(--mono)}
+  .inp{background:var(--panel2);border:1px solid var(--line);color:var(--amber);font-family:var(--mono);font-weight:700;border-radius:6px;text-align:center}
+  input[type=range]{accent-color:var(--amber)}
+  .note{background:var(--panel);border-radius:9px;padding:10px 15px;border:1px solid var(--line);margin-bottom:14px;font-family:var(--mono);font-size:12.5px;color:var(--dim)}
+  .papers{background:var(--panel);border-radius:12px;padding:14px 18px 6px;border:1px solid var(--line)}
+  .phead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px}
+  .ptitle{font-size:13px;font-weight:600}
+  .plag{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
+  .row{display:grid;grid-template-columns:84px 50px 1fr 150px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+  .plabel{font-size:13px;color:var(--text);font-weight:500}
+  .pval{font-family:var(--mono);font-size:17px;text-align:center;font-weight:600}
+  .pinp{width:52px;background:var(--panel);border:1.5px solid var(--line);font-family:var(--mono);font-size:15px;font-weight:700;padding:5px 6px;border-radius:5px;text-align:center}
+  .bar{position:relative;height:30px;background:var(--track);border-radius:5px}
+  .barfill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;opacity:.9;transition:width .35s cubic-bezier(.2,.7,.2,1)}
+  .barclip{position:absolute;inset:0;border-radius:5px;overflow:hidden}
+  .cmpline{position:absolute;top:4px;bottom:4px;width:2px;background:var(--text);opacity:.35}
+  .ceilline{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.75}
+  .pright{text-align:right;font-family:var(--mono);font-size:11.5px;line-height:1.5}
+  .pgap{font-size:12px;color:var(--dim)}
+  .gnum{font-weight:700;font-size:14px}
+  .glabel{color:var(--dim)}
+  .deltas{font-size:11px;margin-top:3px;display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+  .deltas span{white-space:nowrap}
+  .dchip{display:inline-flex;align-items:baseline;gap:5px}
+  .dchip b{font-weight:700;font-size:13px}
+  .dlabel{color:var(--dim);font-size:10.5px;font-weight:700}
+  .insight{margin-top:14px;background:var(--panel2);border-radius:9px;padding:11px 15px;border:1px solid var(--line);font-size:12.5px;color:var(--dim);line-height:1.55}
+  .foot{margin-top:12px;font-size:11px;color:var(--faint);line-height:1.6}
+  b.t{color:var(--text)} .amberT{color:var(--amber)} .blueT{color:var(--blue)} .redT{color:var(--red)} .greenT{color:var(--green)} .textT{color:var(--text)} .faintT{color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <div class="eyebrow">CSE 2026 RANK PREDICTOR</div>
+    <h1>You cannot manage what you cannot measure</h1>
+    <p class="sub"><b class="amberT">Target</b>: seed a rank, then edit any paper to see your live predicted rank.
+      <b class="blueT"> 2024 / 2025</b>: your actual results. The vertical marker line on each bar = <span class="textT">realistic ceiling</span>.</p>
+  </div>
+  <div class="toggles" id="toggles"></div>
+  <div class="strip" id="strip"></div>
+  <div id="note"></div>
+  <div class="papers">
+    <div class="phead">
+      <div class="ptitle" id="ptitle"></div>
+      <div class="plag" id="plag"></div>
+    </div>
+    <div id="rows"></div>
+  </div>
+  <div class="insight" id="insight"></div>
+  <div class="foot">
+    Rank curve: weighted average of each rank's actual final total across 2020-2025 (decay 1.5) - computed per-rank for the top 100, then every 5 ranks (marks are too compressed below ~150 to separate adjacent ranks). +/-10-mark band. Ceilings: 95th-pct of recency-weighted selected candidates (2022-25, self-reported).
+    PT shown as placeholder 183 for your years (you weren't called) - written totals are your real marks.
+  </div>
+</div>
+
+<script>
+//  Grounded data (2020-2025 UPSC CSE results) 
+const CURVE = [[1,1073],[2,1058],[3,1053],[4,1044],[5,1040],[6,1039],[7,1038],[8,1037],[9,1034],[10,1034],[11,1033],[12,1031],[13,1030],[14,1028],[15,1027],[16,1025],[17,1025],[18,1024],[19,1023],[20,1022],[21,1022],[22,1021],[23,1021],[24,1019],[25,1019],[26,1019],[27,1018],[28,1017],[29,1016],[30,1015],[31,1015],[32,1014],[33,1014],[34,1013],[35,1013],[36,1012],[37,1012],[38,1011],[39,1010],[40,1009],[41,1009],[42,1009],[43,1009],[44,1008],[45,1008],[46,1008],[47,1007],[48,1007],[49,1007],[50,1006],[51,1006],[52,1005],[53,1005],[54,1005],[55,1005],[56,1004],[57,1004],[58,1003],[59,1003],[60,1003],[61,1002],[62,1002],[63,1001],[64,1001],[65,1001],[66,1001],[67,1000],[68,1000],[69,1000],[70,1000],[71,999],[72,999],[73,999],[74,999],[75,998],[76,998],[77,998],[78,997],[79,997],[80,997],[81,997],[82,997],[83,996],[84,996],[85,995],[86,995],[87,995],[88,995],[89,995],[90,995],[91,994],[92,994],[93,994],[94,994],[95,993],[96,993],[97,993],[98,993],[99,992],[100,992],[105,991],[110,990],[115,989],[120,988],[125,987],[130,986],[135,985],[140,984],[145,983],[150,982],[155,982],[160,981],[165,980],[170,979],[175,979],[180,978],[185,977],[190,977],[195,976],[200,976],[205,975],[210,974],[215,974],[220,973],[225,973],[230,972],[235,972],[240,971],[245,970],[250,970],[255,970],[260,969],[265,969],[270,968],[275,968],[280,967],[285,967],[290,967],[295,966],[300,966],[305,965],[310,965],[315,965],[320,964],[325,964],[330,963],[335,963],[340,962],[345,962],[350,961],[355,960],[360,960],[365,960],[370,959],[375,959],[380,958],[385,958],[390,958],[395,958],[400,957],[405,956],[410,956],[415,955],[420,955],[425,955],[430,954],[435,954],[440,953],[445,953],[450,953]];
+const PAPERS = [
+  { key:"Essay", label:"Essay",        max:250, p10:92,  median:109, realmax:120, y24:105, y25:77  },
+  { key:"GS1",   label:"GS-I",         max:250, p10:87,  median:99,  realmax:115, y24:85,  y25:93  },
+  { key:"GS2",   label:"GS-II",        max:250, p10:100, median:110, realmax:125, y24:92,  y25:106 },
+  { key:"GS3",   label:"GS-III",       max:250, p10:77,  median:87,  realmax:102, y24:55,  y25:70  },
+  { key:"GS4",   label:"GS-IV",        max:250, p10:104, median:116, realmax:129, y24:98,  y25:100 },
+  { key:"Opt1",  label:"Optional P-1", max:250, p10:116, median:134, realmax:155, y24:98,  y25:120 },
+  { key:"Opt2",  label:"Optional P-2", max:250, p10:117, median:134, realmax:154, y24:113, y25:109 },
+  { key:"PT",    label:"Interview",    max:275, p10:160, median:183, realmax:209, y24:null, y25:null },
+];
+const WRITTEN_KEYS = ["Essay","GS1","GS2","GS3","GS4","Opt1","Opt2"];
+const MEDIAN_FULL = PAPERS.reduce((s,p)=>s+p.median,0);
+const REALMAX_FULL = PAPERS.reduce((s,p)=>s+p.realmax,0);
+const sumYr = (yr)=>WRITTEN_KEYS.reduce((s,k)=>s+PAPERS.find(p=>p.key===k)[yr],0);
+const W24 = sumYr("y24"), W25 = sumYr("y25");
+
+const VIEWS = {
+  target:{ id:"target", label:"Target", accent:"var(--blue)", cmp:"y25" },
+  y25:   { id:"y25",    label:"2025",   accent:"var(--blue)", cmp:"y24" },
+  y24:   { id:"y24",    label:"2024",   accent:"var(--blue)", cmp:null  },
+};
+
+//  Math (ported exactly) 
+function rankToFinal(rank){
+  rank=Math.max(1,Math.min(450,rank));
+  for(let i=0;i<CURVE.length-1;i++){const[r0,f0]=CURVE[i],[r1,f1]=CURVE[i+1];if(rank>=r0&&rank<=r1)return f0+((rank-r0)/(r1-r0))*(f1-f0);}
+  return CURVE[CURVE.length-1][1];
+}
+function finalToRank(final){
+  if(final>=CURVE[0][1])return 1;
+  if(final<=CURVE[CURVE.length-1][1])return ">450";
+  for(let i=0;i<CURVE.length-1;i++){const[r0,f0]=CURVE[i],[r1,f1]=CURVE[i+1];if(final<=f0&&final>=f1)return Math.round(r0+((f0-final)/(f0-f1))*(r1-r0));}
+  return ">450";
+}
+function distribute(targetFinal){
+  let alloc={}; PAPERS.forEach(p=>alloc[p.key]=p.median);
+  let diff=targetFinal-MEDIAN_FULL;
+  if(diff>0){
+    for(let i=0;i<8&&diff>0.5;i++){
+      const head=PAPERS.map(p=>Math.max(0,p.realmax-alloc[p.key]));
+      const tot=head.reduce((a,b)=>a+b,0); if(tot<=0)break;
+      PAPERS.forEach((p,j)=>{alloc[p.key]+=Math.min(head[j],(head[j]/tot)*diff);});
+      diff=targetFinal-PAPERS.reduce((s,p)=>s+alloc[p.key],0);
+    }
+  } else if(diff<0){
+    for(let i=0;i<8&&diff<-0.5;i++){
+      const room=PAPERS.map(p=>Math.max(0,alloc[p.key]-p.p10));
+      const tot=room.reduce((a,b)=>a+b,0); if(tot<=0)break;
+      PAPERS.forEach((p,j)=>{alloc[p.key]-=Math.min(room[j],(room[j]/tot)*-diff);});
+      diff=targetFinal-PAPERS.reduce((s,p)=>s+alloc[p.key],0);
+    }
+  }
+  const out={}; PAPERS.forEach(p=>out[p.key]=Math.round(alloc[p.key]));
+  let resid=targetFinal-PAPERS.reduce((s,p)=>s+out[p.key],0); let guard=0;
+  while(resid!==0&&guard++<50){
+    const cand=PAPERS.map(p=>({k:p.key,room:resid>0?p.realmax-out[p.key]:out[p.key]-p.p10})).filter(c=>c.room>0).sort((a,b)=>b.room-a.room);
+    if(!cand.length)break;
+    out[cand[0].k]+=resid>0?1:-1; resid+=resid>0?-1:1;
+  }
+  return out;
+}
+
+//  State 
+let view="target";
+let targetRank=100;
+let plan=seedFromRank(100);
+let editingFinal=false;
+let finalInput="";
+
+function seedFromRank(r){const d=distribute(Math.round(rankToFinal(r)));const m={};PAPERS.forEach(p=>m[p.key]=d[p.key]);return m;}
+function setRankAndSeed(r){if(isNaN(r)||r===null)return;r=Math.max(1,Math.min(450,r));targetRank=r;plan=seedFromRank(r);render();}
+function setPlanMark(k,v){const p=PAPERS.find(x=>x.key===k);let n=parseInt(v,10);if(isNaN(n))n=0;n=Math.max(0,Math.min(p.max,n));plan[k]=n;render();}
+function applyFinalScore(f){const totalMax=PAPERS.reduce((s,p)=>s+p.max,0);f=Math.max(0,Math.min(totalMax,f));const d=distribute(f);PAPERS.forEach(p=>plan[p.key]=d[p.key]);const r=finalToRank(f);if(r!==">450")targetRank=r;}
+function onFinalChange(raw){editingFinal=true;finalInput=raw;if(raw.trim()!==""&&!isNaN(parseInt(raw,10))){applyFinalScore(parseInt(raw,10));}render(true);}
+// Only treat blur as "user left the field" if focus did NOT move back to the same box
+// (a re-render removes/recreates the element, firing a spurious blur we must ignore).
+function onFinalBlur(){ setTimeout(()=>{ const fi=document.getElementById("finalInp"); if(document.activeElement!==fi){ editingFinal=false; finalInput=""; render(); } },0); }
+
+//  Derived 
+function valueOf(p){if(view==="target")return plan[p.key];return p.key==="PT"?183:p[view];}
+function cmpOf(p){const V=VIEWS[view];if(!V.cmp)return null;return p.key==="PT"?null:p[V.cmp];}
+
+//  Render helpers 
+function esc(s){return String(s);}
+function deltaChip(value,base,label){
+  if(base==null)return "";
+  const d=value-base;
+  const cls=d>0?"greenT":d<0?"redT":"faintT";
+  const sign=d>0?"+":d<0?"-":"";
+  return `<span class="dchip"><b class="${cls}">${sign}${Math.abs(d)}</b><span class="dlabel">vs ${label}</span></span>`;
+}
+function barHTML(value,ceiling,cmpVal,accent,max){
+  const pct=Math.min(100,(value/max)*100);
+  const ceilPct=Math.min(100,(ceiling/max)*100);
+  const atCeil=ceiling-value<=1;
+  const fill=atCeil?"var(--green)":accent;
+  let cmp="";
+  if(cmpVal!=null){const cp=Math.min(100,(cmpVal/max)*100);cmp=`<div class="cmpline" style="left:${cp}%"></div>`;}
+  return `<div class="bar">
+    <div class="barclip"><div class="barfill" style="width:${pct}%;background:${fill}"></div></div>
+    ${cmp}
+    <div class="ceilline" style="left:${ceilPct}%" title="Ceiling ${ceiling}"></div>
+  </div>`;
+}
+
+let isRendering=false;
+function render(skipFinalInput){
+  if(isRendering)return;
+  isRendering=true;
+  captureFocus();
+  const V=VIEWS[view];
+  const written=WRITTEN_KEYS.reduce((s,k)=>s+valueOf(PAPERS.find(p=>p.key===k)),0);
+  const ptVal=valueOf(PAPERS.find(p=>p.key==="PT"));
+  const finalTot=written+ptVal;
+  const rank=finalToRank(finalTot);
+  const targetFinal=Math.round(rankToFinal(targetRank));
+  const totalGap=REALMAX_FULL-PAPERS.reduce((s,p)=>s+valueOf(p),0);
+  const rankTxt=rank===">450"?"450+":rank;
+
+  // toggles
+  document.getElementById("toggles").innerHTML=Object.values(VIEWS).map(v=>{
+    const active=view===v.id;
+    const sub=v.id==="target"?"plan & predict":"your result";
+    return `<button class="toggle" data-view="${v.id}" style="${active?`background:var(--panel);border-color:${v.accent}`:""}">
+      <div class="tl" style="${active?`color:${v.accent}`:""}">${v.label}</div>
+      <div class="ts">${sub}</div></button>`;
+  }).join("");
+
+  // strip
+  let strip="";
+  strip+=`<div class="strip" style="grid-template-columns:${view==="target"?"1.5fr 1fr 1fr":"1fr 1fr 1fr"}"></div>`;
+  let cells="";
+  if(view==="target"){
+    cells+=`<div class="card amber">
+      <div class="lbl" style="margin-bottom:6px">Seed a target rank</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input class="inp" id="rankInp" type="text" inputmode="numeric" value="${targetRank}" style="width:70px;font-size:22px;padding:3px 6px">
+        <input id="rankRange" type="range" min="1" max="450" value="${targetRank}" style="flex:1">
+      </div>
+      <div class="csub" style="margin-top:6px">fills the bars below - then edit any paper</div>
+    </div>`;
+    const acc=(rank!==">450"&&rank<=targetRank)?"var(--green)":"var(--amber)";
+    const sub2=rank===">450"?"below 450":(rank<=targetRank?"meets target":`target was ${targetRank}`);
+    cells+=`<div class="card"><div class="lbl">Rank from your marks</div><div class="big" style="color:${acc}">${rankTxt}</div><div class="csub">${sub2}</div></div>`;
+    const finVal=editingFinal?finalInput:finalTot;
+    cells+=`<div class="card amber">
+      <div class="lbl" style="margin-bottom:4px">Final (+PT) - editable</div>
+      <input class="inp" id="finalInp" type="text" inputmode="numeric" value="${finVal}" style="width:100%;font-size:26px;padding:2px 8px">
+      <div class="csub" style="margin-top:5px">written ${written} | PT ${ptVal} | type to back-fill papers</div>
+    </div>`;
+  } else {
+    cells+=`<div class="card"><div class="lbl">Expected rank</div><div class="big" style="color:${V.accent}">${rankTxt}</div><div class="csub">+/-10 marks band</div></div>`;
+    cells+=`<div class="card"><div class="lbl">Written</div><div class="big textT">${written}</div><div class="csub">'25 ${W25} | '24 ${W24}</div></div>`;
+    cells+=`<div class="card"><div class="lbl">Final (+PT)</div><div class="big textT">${finalTot}</div><div class="csub">written ${written} | PT ${ptVal}</div></div>`;
+  }
+  const stripEl=document.getElementById("strip");
+  stripEl.style.gridTemplateColumns=view==="target"?"1.5fr 1fr 1fr":"1fr 1fr 1fr";
+  stripEl.innerHTML=cells;
+
+  // note
+  document.getElementById("note").innerHTML = view==="target"
+    ? `<div class="note">Final for AIR ${targetRank}: <span class="amberT" style="font-weight:700">${targetFinal}</span><span class="faintT">  |  your plan totals <span class="textT">${finalTot}</span> -> ${finalTot>=targetFinal?"on/above target":`${targetFinal-finalTot} short`}</span></div>`
+    : "";
+
+  // paper header
+  document.getElementById("ptitle").textContent = view==="target" ? "Edit each paper - rank updates live" : `Your ${V.label} marks`;
+  document.getElementById("plag").innerHTML = `<span class="glabel">total lag from ceiling:</span> <b class="gnum" style="color:var(--orange)">-${totalGap}</b>`;
+
+  // rows
+  document.getElementById("rows").innerHTML = PAPERS.map(p=>{
+    const value=valueOf(p); const ceiling=p.realmax; const cmpVal=cmpOf(p); const gap=ceiling-value;
+    const editable=view==="target";
+    const valCell=editable
+      ? `<input class="pinp" data-key="${p.key}" type="text" inputmode="numeric" value="${value}" style="color:var(--text)">`
+      : `<div class="pval" style="color:${V.accent}">${value}</div>`;
+    let right=`<div class="pgap">${gap<=1?`<b class="gnum" style="color:var(--green)">maxed</b>`:`<b class="gnum" style="color:var(--orange)">${gap}</b> <span class="glabel">to ceiling</span>`}</div>`;
+    if(view==="target"){
+      if(p.y25!=null) right+=`<div class="deltas">${deltaChip(value,p.y25,"'25")}${deltaChip(value,p.y24,"'24")}</div>`;
+    } else if(cmpVal!=null){
+      right+=`<div class="deltas" style="justify-content:flex-end">${deltaChip(value,cmpVal,"'24")}</div>`;
+    }
+    return `<div class="row">
+      <div class="plabel">${p.label}</div>
+      ${valCell}
+      ${barHTML(value,ceiling,cmpVal,V.accent,p.max)}
+      <div class="pright">${right}</div>
+    </div>`;
+  }).join("");
+
+  // insight
+  let ins="";
+  if(view==="y25") ins=`<b class="t">2025 read:</b> written rose +${W25-W24} vs 2024, but <span class="redT">Essay fell 28</span> (105->77) - it erased most of the gains in GS-III, GS-II and Optional P-1. Faint line = your 2024 on each bar.`;
+  if(view==="y24") ins=`<b class="t">2024 read:</b> your baseline. GS-III (55) and Optional P-1 (98) were the weakest vs ceiling. Switch to 2025 to see the year-on-year move.`;
+  if(view==="target") ins=`<b class="t">Target read:</b> blue bars = marks to aim for; faint line = your 2025. The papers with the biggest blue-over-faint jump are where this rank is won - for you, Essay and the Optional carry the most headroom.`;
+  document.getElementById("insight").innerHTML=ins;
+
+  attach();
+  restoreFocus();
+  isRendering=false;
+}
+
+// Remember which field is focused (and cursor position) before a re-render,
+// then put the cursor back after, so typing isn't interrupted.
+let focusMemo=null;
+function captureFocus(){
+  const el=document.activeElement;
+  if(el && (el.classList.contains("pinp")||el.id==="rankInp"||el.id==="finalInp"||el.id==="rankRange")){
+    focusMemo={
+      id:el.id||null,
+      key:el.dataset?el.dataset.key:null,
+      start:el.selectionStart,
+      end:el.selectionEnd
+    };
+  } else {
+    focusMemo=null;
+  }
+}
+function restoreFocus(){
+  if(!focusMemo)return;
+  let el=null;
+  if(focusMemo.key) el=document.querySelector('.pinp[data-key="'+focusMemo.key+'"]');
+  else if(focusMemo.id) el=document.getElementById(focusMemo.id);
+  if(el){
+    el.focus();
+    try{
+      if(focusMemo.start!=null && el.type!=="range"){
+        const len=el.value.length;
+        const s=Math.min(focusMemo.start,len), e=Math.min(focusMemo.end,len);
+        el.setSelectionRange(s,e);
+      }
+    }catch(err){}
+  }
+}
+
+function attach(){
+  document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{view=b.dataset.view;editingFinal=false;render();});
+  const ri=document.getElementById("rankInp"); if(ri) ri.oninput=e=>{const v=e.target.value;if(v.trim()===""){return;}const n=parseInt(v,10);if(!isNaN(n))setRankAndSeed(n);};
+  const rr=document.getElementById("rankRange"); if(rr) rr.oninput=e=>setRankAndSeed(parseInt(e.target.value));
+  const fi=document.getElementById("finalInp");
+  if(fi){
+    fi.oninput=e=>onFinalChange(e.target.value);
+    fi.onblur=onFinalBlur;
+    fi.onfocus=e=>{ if(!editingFinal){ editingFinal=true; finalInput=String(valueOfFinal()); e.target.select(); } };
+  }
+  document.querySelectorAll(".pinp").forEach(inp=>{
+    inp.oninput=e=>setPlanMark(inp.dataset.key,e.target.value);
+  });
+}
+function valueOfFinal(){const written=WRITTEN_KEYS.reduce((s,k)=>s+valueOf(PAPERS.find(p=>p.key===k)),0);return written+valueOf(PAPERS.find(p=>p.key==="PT"));}
+
+render();
+</script>
+</body>
+</html>
