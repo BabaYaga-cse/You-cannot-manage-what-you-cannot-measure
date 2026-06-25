@@ -39,6 +39,19 @@
   .ptitle{font-size:13px;font-weight:600}
   .plag{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
   .row{display:grid;grid-template-columns:84px 50px 1fr 150px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+  .row.lockrow{grid-template-columns:30px 78px 48px 1fr 144px;gap:9px}
+  .lockbtn{background:transparent;border:1px solid var(--line);color:var(--faint);font-family:var(--mono);font-size:12px;font-weight:700;border-radius:5px;padding:4px 2px;cursor:pointer;width:28px;transition:all .12s}
+  .lockbtn:hover{border-color:var(--blue);color:var(--blue)}
+  .lockbtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+  .lockedinp{background:var(--panel2)!important;color:var(--blue)!important;opacity:.85}
+  .lockbtn.disabled{opacity:.35;cursor:not-allowed;border-style:dashed}
+  .lockbtn.disabled:hover{border-color:var(--line);color:var(--faint)}
+  .tlockbtn{background:transparent;border:1px solid var(--amberDim);color:var(--blue);font-family:var(--mono);font-size:10px;font-weight:700;border-radius:5px;padding:3px 7px;cursor:pointer;transition:all .12s}
+  .tlockbtn:hover{background:var(--panel2)}
+  .tlockbtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+  .lockspace{width:0}
+  .clearlocks{margin-left:8px;background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:5px;cursor:pointer}
+  .clearlocks:hover{border-color:var(--red);color:var(--red)}
   .plabel{font-size:13px;color:var(--text);font-weight:500}
   .pval{font-family:var(--mono);font-size:17px;text-align:center;font-weight:600}
   .pinp{width:52px;background:var(--panel);border:1.5px solid var(--line);font-family:var(--mono);font-size:15px;font-weight:700;padding:5px 6px;border-radius:5px;text-align:center}
@@ -59,6 +72,15 @@
   .insight{margin-top:14px;background:var(--panel2);border-radius:9px;padding:11px 15px;border:1px solid var(--line);font-size:12.5px;color:var(--dim);line-height:1.55}
   .foot{margin-top:12px;font-size:11px;color:var(--faint);line-height:1.6}
   b.t{color:var(--text)} .amberT{color:var(--amber)} .blueT{color:var(--blue)} .redT{color:var(--red)} .greenT{color:var(--green)} .textT{color:var(--text)} .faintT{color:var(--faint)}
+  .charts{display:grid;grid-template-columns:1fr;gap:14px;margin-top:16px}
+  .chartcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .chart-title{font-size:12px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;font-size:11px;color:var(--dim);font-family:var(--mono)}
+  .chart-legend span{display:inline-flex;align-items:center;gap:5px}
+  .lg-swatch{width:11px;height:11px;border-radius:2px;display:inline-block}
+  .lg-out{background:transparent;border:1.5px dashed var(--faint)}
+  #radarWrap svg,#curveWrap svg{width:100%;height:auto;display:block}
+  @media(max-width:620px){.pred-row,.row{grid-template-columns:70px 44px 1fr 120px}}
 </style>
 </head>
 <body>
@@ -80,6 +102,26 @@
     <div id="rows"></div>
   </div>
   <div class="insight" id="insight"></div>
+
+  <div class="charts">
+    <div class="chartcard">
+      <div class="chart-title">Subject Balance vs Ceiling</div>
+      <div id="radarWrap"></div>
+      <div class="chart-legend">
+        <span><span class="lg-swatch" style="background:var(--blue)"></span>Your marks (editable)</span>
+        <span><span class="lg-swatch lg-out"></span>95th-pct ceiling</span>
+      </div>
+    </div>
+    <div class="chartcard">
+      <div class="chart-title">Total Marks &rarr; Rank Curve</div>
+      <div id="curveWrap"></div>
+      <div class="chart-legend">
+        <span><span class="lg-swatch" style="background:var(--blue)"></span>Your total</span>
+        <span><span class="lg-swatch" style="background:var(--orange)"></span>Ceiling total</span>
+      </div>
+    </div>
+  </div>
+
   <div class="foot">
     Rank curve: weighted average of each rank's actual final total across 2020-2025 (decay 1.5) - computed per-rank for the top 100, then every 5 ranks (marks are too compressed below ~150 to separate adjacent ranks). +/-10-mark band. Ceilings: 95th-pct of recency-weighted selected candidates (2022-25, self-reported).
     PT shown as placeholder 183 for your years (you weren't called) - written totals are your real marks.
@@ -157,11 +199,76 @@ let targetRank=100;
 let plan=seedFromRank(100);
 let editingFinal=false;
 let finalInput="";
+let locked={};            // {paperKey:true} for pinned papers
+let lockedTotal=null;     // the total to hold exactly (set only when user locks the total)
+let totalLocked=false;    // user must explicitly lock the total before locking papers
 
 function seedFromRank(r){const d=distribute(Math.round(rankToFinal(r)));const m={};PAPERS.forEach(p=>m[p.key]=d[p.key]);return m;}
-function setRankAndSeed(r){if(isNaN(r)||r===null)return;r=Math.max(1,Math.min(450,r));targetRank=r;plan=seedFromRank(r);render();}
-function setPlanMark(k,v){const p=PAPERS.find(x=>x.key===k);let n=parseInt(v,10);if(isNaN(n))n=0;n=Math.max(0,Math.min(p.max,n));plan[k]=n;render();}
-function applyFinalScore(f){const totalMax=PAPERS.reduce((s,p)=>s+p.max,0);f=Math.max(0,Math.min(totalMax,f));const d=distribute(f);PAPERS.forEach(p=>plan[p.key]=d[p.key]);const r=finalToRank(f);if(r!==">450")targetRank=r;}
+
+function toggleTotalLock(){
+  if(totalLocked){ totalLocked=false; lockedTotal=null; locked={}; }
+  else { totalLocked=true; lockedTotal=PAPERS.reduce((s,p)=>s+plan[p.key],0); }
+  render();
+}
+
+// Redistribute the remaining marks across UNLOCKED papers, keeping locked ones fixed
+// and holding the grand total exactly at `total`. Remainder spread by headroom toward ceiling.
+function redistributeUnlocked(total){
+  const lockedSum=PAPERS.filter(p=>locked[p.key]).reduce((s,p)=>s+plan[p.key],0);
+  const unlocked=PAPERS.filter(p=>!locked[p.key]);
+  if(unlocked.length===0) return; // everything locked - nothing to move
+  let remain=total-lockedSum;
+  // clamp remain to what unlocked papers can physically hold
+  const capMax=unlocked.reduce((s,p)=>s+p.max,0);
+  remain=Math.max(0,Math.min(capMax,remain));
+  // start each unlocked paper at its p10 floor (or 0 if remainder is tiny), then add by headroom
+  let alloc={}; unlocked.forEach(p=>alloc[p.key]=Math.min(p.p10,p.max));
+  let base=unlocked.reduce((s,p)=>s+alloc[p.key],0);
+  let diff=remain-base;
+  if(diff>0){
+    for(let i=0;i<10&&diff>0.5;i++){
+      const head=unlocked.map(p=>Math.max(0,p.max-alloc[p.key]));
+      const tot=head.reduce((a,b)=>a+b,0); if(tot<=0)break;
+      unlocked.forEach((p,j)=>{alloc[p.key]+=Math.min(head[j],(head[j]/tot)*diff);});
+      diff=remain-unlocked.reduce((s,p)=>s+alloc[p.key],0);
+    }
+  } else if(diff<0){
+    for(let i=0;i<10&&diff<-0.5;i++){
+      const room=unlocked.map(p=>Math.max(0,alloc[p.key]));
+      const tot=room.reduce((a,b)=>a+b,0); if(tot<=0)break;
+      unlocked.forEach((p,j)=>{alloc[p.key]-=Math.min(room[j],(room[j]/tot)*-diff);});
+      diff=remain-unlocked.reduce((s,p)=>s+alloc[p.key],0);
+    }
+  }
+  unlocked.forEach(p=>plan[p.key]=Math.round(alloc[p.key]));
+  // fix rounding residue on the unlocked paper with most room
+  let resid=remain-unlocked.reduce((s,p)=>s+plan[p.key],0); let g=0;
+  while(resid!==0&&g++<60){
+    const cand=unlocked.map(p=>({k:p.key,room:resid>0?p.max-plan[p.key]:plan[p.key]})).filter(c=>c.room>0).sort((a,b)=>b.room-a.room);
+    if(!cand.length)break;
+    plan[cand[0].k]+=resid>0?1:-1; resid+=resid>0?-1:1;
+  }
+}
+
+function toggleLock(k){
+  if(!totalLocked) return; // total must be locked first
+  if(locked[k]){ delete locked[k]; }
+  else { locked[k]=true; }
+  redistributeUnlocked(lockedTotal);
+  render();
+}
+function clearLocks(){ locked={}; lockedTotal=null; totalLocked=false; render(); }
+
+function setRankAndSeed(r){if(isNaN(r)||r===null)return;r=Math.max(1,Math.min(450,r));targetRank=r;locked={};lockedTotal=null;totalLocked=false;plan=seedFromRank(r);render();}
+function setPlanMark(k,v){const p=PAPERS.find(x=>x.key===k);let n=parseInt(v,10);if(isNaN(n))n=0;n=Math.max(0,Math.min(p.max,n));plan[k]=n;
+  // Under active total-lock: editing an unlocked paper pins it momentarily so the
+  // other still-unlocked papers absorb the change and the total stays exact.
+  if(totalLocked && !locked[k]){
+    const others=PAPERS.filter(x=>!locked[x.key]&&x.key!==k);
+    if(others.length>0){ locked[k]=true; redistributeUnlocked(lockedTotal); delete locked[k]; }
+  }
+  render();}
+function applyFinalScore(f){const totalMax=PAPERS.reduce((s,p)=>s+p.max,0);f=Math.max(0,Math.min(totalMax,f));locked={};lockedTotal=null;totalLocked=false;const d=distribute(f);PAPERS.forEach(p=>plan[p.key]=d[p.key]);const r=finalToRank(f);if(r!==">450")targetRank=r;}
 function onFinalChange(raw){editingFinal=true;finalInput=raw;if(raw.trim()!==""&&!isNaN(parseInt(raw,10))){applyFinalScore(parseInt(raw,10));}render(true);}
 // Only treat blur as "user left the field" if focus did NOT move back to the same box
 // (a re-render removes/recreates the element, firing a spurious blur we must ignore).
@@ -235,9 +342,12 @@ function render(skipFinalInput){
     cells+=`<div class="card"><div class="lbl">Rank from your marks</div><div class="big" style="color:${acc}">${rankTxt}</div><div class="csub">${sub2}</div></div>`;
     const finVal=editingFinal?finalInput:finalTot;
     cells+=`<div class="card amber">
-      <div class="lbl" style="margin-bottom:4px">Final (+PT) - editable</div>
-      <input class="inp" id="finalInp" type="text" inputmode="numeric" value="${finVal}" style="width:100%;font-size:26px;padding:2px 8px">
-      <div class="csub" style="margin-top:5px">written ${written} | PT ${ptVal} | type to back-fill papers</div>
+      <div class="lbl" style="margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+        <span>Final (+PT)${totalLocked?' - locked':' - editable'}</span>
+        <button id="totalLockBtn" class="tlockbtn ${totalLocked?'on':''}" title="${totalLocked?'Total locked - tap to unlock':'Lock the total, then lock papers'}">${totalLocked?'[L] locked':'[ ] lock total'}</button>
+      </div>
+      <input class="inp ${totalLocked?'lockedinp':''}" id="finalInp" type="text" inputmode="numeric" value="${finVal}" style="width:100%;font-size:26px;padding:2px 8px" ${totalLocked?'disabled':''}>
+      <div class="csub" style="margin-top:5px">${totalLocked?`held at ${lockedTotal} - now lock papers below`:`written ${written} | PT ${ptVal} | type to back-fill papers`}</div>
     </div>`;
   } else {
     cells+=`<div class="card"><div class="lbl">Expected rank</div><div class="big" style="color:${V.accent}">${rankTxt}</div><div class="csub">+/-10 marks band</div></div>`;
@@ -254,15 +364,24 @@ function render(skipFinalInput){
     : "";
 
   // paper header
-  document.getElementById("ptitle").textContent = view==="target" ? "Edit each paper - rank updates live" : `Your ${V.label} marks`;
+  const nLocked=Object.keys(locked).length;
+  if(view==="target" && totalLocked){
+    document.getElementById("ptitle").innerHTML = `Total held at <b style="color:var(--blue)">${lockedTotal}</b> &middot; ${nLocked} paper${nLocked!==1?'s':''} pinned <button id="clearLocksBtn" class="clearlocks">unlock all</button>`;
+  } else {
+    document.getElementById("ptitle").textContent = view==="target" ? "Lock the total first, then pin papers" : `Your ${V.label} marks`;
+  }
   document.getElementById("plag").innerHTML = `<span class="glabel">total lag from ceiling:</span> <b class="gnum" style="color:var(--orange)">-${totalGap}</b>`;
 
   // rows
   document.getElementById("rows").innerHTML = PAPERS.map(p=>{
     const value=valueOf(p); const ceiling=p.realmax; const cmpVal=cmpOf(p); const gap=ceiling-value;
     const editable=view==="target";
+    const isLocked=!!locked[p.key];
+    const lockBtn=editable
+      ? `<button class="lockbtn ${isLocked?'on':''} ${!totalLocked?'disabled':''}" data-lock="${p.key}" title="${!totalLocked?'Lock the total first':(isLocked?'Locked - tap to unlock':'Tap to lock this paper')}" ${!totalLocked?'disabled':''}>${isLocked?'[L]':'[ ]'}</button>`
+      : `<span class="lockspace"></span>`;
     const valCell=editable
-      ? `<input class="pinp" data-key="${p.key}" type="text" inputmode="numeric" value="${value}" style="color:var(--text)">`
+      ? `<input class="pinp ${isLocked?'lockedinp':''}" data-key="${p.key}" type="text" inputmode="numeric" value="${value}" style="color:var(--text)" ${isLocked?'disabled':''}>`
       : `<div class="pval" style="color:${V.accent}">${value}</div>`;
     let right=`<div class="pgap">${gap<=1?`<b class="gnum" style="color:var(--green)">maxed</b>`:`<b class="gnum" style="color:var(--orange)">${gap}</b> <span class="glabel">to ceiling</span>`}</div>`;
     if(view==="target"){
@@ -270,7 +389,8 @@ function render(skipFinalInput){
     } else if(cmpVal!=null){
       right+=`<div class="deltas" style="justify-content:flex-end">${deltaChip(value,cmpVal,"'24")}</div>`;
     }
-    return `<div class="row">
+    return `<div class="row ${editable?'lockrow':''}">
+      ${editable?lockBtn:''}
       <div class="plabel">${p.label}</div>
       ${valCell}
       ${barHTML(value,ceiling,cmpVal,V.accent,p.max)}
@@ -285,13 +405,67 @@ function render(skipFinalInput){
   if(view==="target") ins=`<b class="t">Target read:</b> blue bars = marks to aim for; faint line = your 2025. The papers with the biggest blue-over-faint jump are where this rank is won - for you, Essay and the Optional carry the most headroom.`;
   document.getElementById("insight").innerHTML=ins;
 
+  drawRadar(); drawCurve(finalTot, rank);
+
   attach();
   restoreFocus();
   isRendering=false;
 }
 
-// Remember which field is focused (and cursor position) before a re-render,
-// then put the cursor back after, so typing isn't interrupted.
+//  RADAR: your marks + target marks vs 95th-pct ceiling 
+function drawRadar(){
+  const W=560,H=340,cx=W/2,cy=H/2+4,R=112;
+  const axes=PAPERS.map(p=>p.label); const n=axes.length;
+  const ceil=PAPERS.map(p=>p.realmax);
+  // single shape: your editable plan (what you type in the papers) vs the ceiling outline
+  const planV=PAPERS.map(p=>plan[p.key]);
+  function pt(i,frac){const ang=-Math.PI/2 + i*2*Math.PI/n; return [cx+Math.cos(ang)*R*frac, cy+Math.sin(ang)*R*frac];}
+  function poly(vals){return vals.map((v,i)=>{const f=Math.max(0,Math.min(1,v/ceil[i]));const[x,y]=pt(i,f);return x.toFixed(1)+","+y.toFixed(1);}).join(" ");}
+  let g="";
+  for(let r=1;r<=4;r++){const f=r/4;let pts="";for(let i=0;i<n;i++){const[x,y]=pt(i,f);pts+=x.toFixed(1)+","+y.toFixed(1)+" ";}g+=`<polygon points="${pts.trim()}" fill="none" stroke="var(--line)" stroke-width="1"/>`;}
+  for(let i=0;i<n;i++){const[x,y]=pt(i,1);g+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;}
+  let cpts="";for(let i=0;i<n;i++){const[x,y]=pt(i,1);cpts+=x.toFixed(1)+","+y.toFixed(1)+" ";}
+  g+=`<polygon points="${cpts.trim()}" fill="none" stroke="var(--faint)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  // your editable plan (blue)
+  g+=`<polygon points="${poly(planV)}" fill="var(--blue)" fill-opacity="0.16" stroke="var(--blue)" stroke-width="2"/>`;
+  planV.forEach((v,i)=>{const f=Math.max(0,Math.min(1,v/ceil[i]));const[x,y]=pt(i,f);g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--blue)"/>`;});
+  axes.forEach((lab,i)=>{const[x,y]=pt(i,1.16);const anchor=Math.abs(x-cx)<8?"middle":(x<cx?"end":"start");g+=`<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="11" fill="var(--dim)" text-anchor="${anchor}" dominant-baseline="middle" font-family="var(--sans)">${lab}</text>`;});
+  document.getElementById("radarWrap").innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
+
+//  RANK CURVE: full marks->rank curve + live dot + ceiling-total reference 
+function drawCurve(yourTotal, yourRank){
+  const W=560,H=300,L=50,Rp=18,T=18,B=36;
+  const plotW=W-L-Rp, plotH=H-T-B;
+  // x = total marks; range tightly to the actual curve data so it fills the width
+  const finals=CURVE.map(c=>c[1]); const ranks=CURVE.map(c=>c[0]);
+  const ptMed=PAPERS.find(p=>p.key==="PT").median;
+  const ceilTotal=PAPERS.filter(p=>p.key!=="PT").reduce((s,p)=>s+p.realmax,0)+ptMed; // written 95th-pct + median PT
+  const curveMin=Math.min(...finals), curveMax=Math.max(...finals);
+  // range = the curve's own span (plus your live dot if it sits outside). Ceiling line is clamped, not range-expanding.
+  const xmin=Math.min(curveMin, yourTotal)-2, xmax=Math.max(curveMax, yourTotal)+2;
+  const rmin=1, rmax=450;
+  function X(v){return L+ (Math.max(xmin,Math.min(xmax,v))-xmin)/(xmax-xmin)*plotW;}
+  function Y(r){const lr=Math.log10(Math.max(1,Math.min(450,r))), l0=Math.log10(rmin), l1=Math.log10(rmax); return T+(lr-l0)/(l1-l0)*plotH;}
+  let g="";
+  // grid + y labels (rank) - full 1..450 span fills the height
+  [1,3,10,30,100,300,450].forEach(r=>{const y=Y(r);g+=`<line x1="${L}" y1="${y.toFixed(1)}" x2="${(W-Rp)}" y2="${y.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`;g+=`<text x="${L-6}" y="${y.toFixed(1)}" font-size="9" fill="var(--faint)" text-anchor="end" dominant-baseline="middle" font-family="var(--mono)">${r}</text>`;});
+  // x labels (marks) - every 20 across the tightened range
+  for(let m=Math.ceil(xmin/20)*20;m<=xmax;m+=20){const x=X(m);g+=`<line x1="${x.toFixed(1)}" y1="${T}" x2="${x.toFixed(1)}" y2="${(T+plotH)}" stroke="var(--line)" stroke-width="0.5" opacity="0.6"/>`;g+=`<text x="${x.toFixed(1)}" y="${(T+plotH+14)}" font-size="9" fill="var(--faint)" text-anchor="middle" font-family="var(--mono)">${m}</text>`;}
+  // the curve path
+  let d="";CURVE.forEach((c,i)=>{const x=X(c[1]),y=Y(c[0]);d+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";});
+  g+=`<path d="${d}" fill="none" stroke="#8893a5" stroke-width="2"/>`;
+  // ceiling-total reference: only drawn if it falls within the curve's range; otherwise noted at the right edge
+  if(ceilTotal<=xmax){const cx2=X(ceilTotal);g+=`<line x1="${cx2.toFixed(1)}" y1="${T}" x2="${cx2.toFixed(1)}" y2="${(T+plotH)}" stroke="#b45309" stroke-width="1.5" stroke-dasharray="4 3"/>`;g+=`<text x="${cx2.toFixed(1)}" y="${T-4}" font-size="9" fill="#b45309" text-anchor="end" font-family="var(--mono)">ceiling ${ceilTotal}</text>`;}
+  else{g+=`<text x="${(W-Rp).toFixed(1)}" y="${T-4}" font-size="9" fill="#b45309" text-anchor="end" font-family="var(--mono)">ceiling ${ceilTotal} (above AIR 1)</text>`;}
+  // your live dot
+  {const rr=(yourRank===">450")?450:yourRank;const x=X(yourTotal),y=Y(rr);g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="var(--blue)" stroke="#fff" stroke-width="2"/>`;
+    const rt=(yourRank===">450")?"450+":("AIR "+yourRank);const ty=y<T+16?y+18:y-12;g+=`<text x="${x.toFixed(1)}" y="${ty.toFixed(1)}" font-size="10" font-weight="700" fill="var(--blue)" text-anchor="middle" font-family="var(--mono)">${rt}</text>`;}
+  // axis titles
+  g+=`<text x="${(L+plotW/2)}" y="${H-2}" font-size="9" fill="var(--dim)" text-anchor="middle" font-family="var(--sans)">Total Marks</text>`;
+  g+=`<text x="11" y="${(T+plotH/2)}" font-size="9" fill="var(--dim)" text-anchor="middle" font-family="var(--sans)" transform="rotate(-90 11 ${(T+plotH/2)})">Better Rank (up)</text>`;
+  document.getElementById("curveWrap").innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${g}</svg>`;
+}
 let focusMemo=null;
 function captureFocus(){
   const el=document.activeElement;
@@ -328,7 +502,7 @@ function attach(){
   const ri=document.getElementById("rankInp"); if(ri) ri.oninput=e=>{const v=e.target.value;if(v.trim()===""){return;}const n=parseInt(v,10);if(!isNaN(n))setRankAndSeed(n);};
   const rr=document.getElementById("rankRange"); if(rr) rr.oninput=e=>setRankAndSeed(parseInt(e.target.value));
   const fi=document.getElementById("finalInp");
-  if(fi){
+  if(fi && !totalLocked){
     fi.oninput=e=>onFinalChange(e.target.value);
     fi.onblur=onFinalBlur;
     fi.onfocus=e=>{ if(!editingFinal){ editingFinal=true; finalInput=String(valueOfFinal()); e.target.select(); } };
@@ -336,6 +510,11 @@ function attach(){
   document.querySelectorAll(".pinp").forEach(inp=>{
     inp.oninput=e=>setPlanMark(inp.dataset.key,e.target.value);
   });
+  document.querySelectorAll("[data-lock]").forEach(b=>{
+    b.onclick=()=>toggleLock(b.dataset.lock);
+  });
+  const tlb=document.getElementById("totalLockBtn"); if(tlb) tlb.onclick=toggleTotalLock;
+  const clb=document.getElementById("clearLocksBtn"); if(clb) clb.onclick=clearLocks;
 }
 function valueOfFinal(){const written=WRITTEN_KEYS.reduce((s,k)=>s+valueOf(PAPERS.find(p=>p.key===k)),0);return written+valueOf(PAPERS.find(p=>p.key==="PT"));}
 
